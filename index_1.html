@@ -1,0 +1,376 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style><title>BandoRadar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Ogni mattina, solo le gare pubbliche a cui la tua impresa può partecipare davvero. Iscriviti alla fase pilota gratuita.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* Layout: due colonne — a sinistra la promessa e un estratto del digest vero, a destra il modulo d'iscrizione; su telefono una colonna sola. */
+:root {
+  --ink: #0B2545;        /* blu notte del marchio */
+  --bg: #F6F8FB;
+  --surface: #FFFFFF;
+  --text: #16243A;
+  --muted: #586A82;
+  --line: #DCE3EE;
+  --accent: #1A56DB;     /* blu BandoRadar */
+  --accent-ink: #FFFFFF;
+  --signal: #0F9D5A;     /* verde "gara trovata" */
+  --warn: #B4540A;
+  --error: #C0392B;
+  --tint: #EAF0FB;
+  --font-display: "Source Serif 4", Cambria, Georgia, serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+  --font-code: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #E4ECF8; --bg: #0A1626; --surface: #112038; --text: #E4ECF8; --muted: #9AABC2;
+    --line: #22344F; --accent: #5B8DEF; --accent-ink: #0A1626; --signal: #3CCB86;
+    --warn: #F0A55A; --error: #F07A6C; --tint: #16294A; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #E4ECF8; --bg: #0A1626; --surface: #112038; --text: #E4ECF8; --muted: #9AABC2;
+  --line: #22344F; --accent: #5B8DEF; --accent-ink: #0A1626; --signal: #3CCB86;
+  --warn: #F0A55A; --error: #F07A6C; --tint: #16294A; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+}
+.wrap {
+  max-width: 1120px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.top { padding-block: 22px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--ink); letter-spacing: .01em; }
+.brand svg { flex: none; }
+
+main.grid {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+  gap: 56px; align-items: start; padding-block: 24px 64px;
+}
+@media (max-width: 880px) { main.grid { grid-template-columns: minmax(0, 1fr); gap: 40px; } }
+
+.pitch { min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--signal); margin: 0; }
+h1 {
+  font-family: var(--font-display); font-weight: 700; color: var(--ink);
+  font-size: clamp(2.1rem, 4.4vw, 3.3rem); line-height: 1.08; letter-spacing: -.01em;
+  margin: 0; text-wrap: balance;
+}
+.lede { font-size: 1.12rem; color: var(--muted); max-width: 34em; margin: 0; }
+
+.facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; max-width: 36em; }
+.facts li { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start; }
+.facts svg { margin-top: 4px; }
+.facts b { color: var(--ink); font-weight: 600; }
+
+/* Estratto del digest: è il prodotto, mostrato com'è */
+.digest { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; max-width: 520px; }
+.digest-head { display: flex; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.digest-head b { color: var(--ink); }
+.gara { padding: 14px 16px; display: grid; grid-template-columns: 46px minmax(0,1fr); gap: 14px; }
+.gara + .gara { border-top: 1px solid var(--line); }
+.score { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 15px; color: #fff; background: var(--signal); font-variant-numeric: tabular-nums; }
+.score.mid { background: var(--warn); }
+.gara h3 { margin: 0 0 2px; font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.35; }
+.gara p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.code { font-family: var(--font-code); font-size: 12.5px; color: var(--accent); background: var(--tint); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.digest-note { font-size: 12.5px; color: var(--muted); margin: 8px 0 0; }
+
+/* Modulo */
+.panel { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px; box-shadow: 0 10px 30px -18px rgba(11,37,69,.35); }
+@media (max-width: 480px) { .panel { padding: 20px; } }
+.panel h2 { font-family: var(--font-display); font-size: 1.55rem; color: var(--ink); margin: 0 0 4px; }
+.panel .sub { color: var(--muted); margin: 0 0 22px; font-size: 15px; }
+form { display: grid; gap: 18px; }
+.field { display: grid; gap: 6px; }
+label, legend { font-size: 14px; font-weight: 600; color: var(--ink); }
+.opt { font-weight: 400; color: var(--muted); }
+input[type=email], input[type=text], select {
+  width: 100%; font: inherit; font-size: 15px; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px;
+}
+input::placeholder { color: var(--muted); opacity: .8; }
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible, .check input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; border-color: var(--accent);
+}
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.err { font-size: 13px; color: var(--error); margin: 0; }
+.field.invalid input, .field.invalid select { border-color: var(--error); }
+#piva { font-family: var(--font-code); letter-spacing: .06em; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+.check { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; font-size: 14px; color: var(--muted); }
+.check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.check a { color: var(--accent); }
+button[type=submit] {
+  font: inherit; font-weight: 600; font-size: 16px; color: var(--accent-ink); background: var(--accent);
+  border: 0; border-radius: 8px; padding: 13px 18px; cursor: pointer;
+}
+button[type=submit]:hover { filter: brightness(1.08); }
+button[disabled] { opacity: .6; cursor: progress; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.esito { border-radius: 10px; padding: 16px; font-size: 15px; }
+.esito.ok { background: color-mix(in srgb, var(--signal) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--signal) 40%, transparent); }
+.esito.ko { background: color-mix(in srgb, var(--error) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--error) 40%, transparent); }
+.esito h3 { margin: 0 0 4px; font-size: 16px; color: var(--ink); }
+.esito p { margin: 0; }
+
+details.privacy { margin-top: 18px; font-size: 13.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+details.privacy summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+details.privacy p { margin: 8px 0 0; max-width: 62ch; }
+
+footer { border-top: 1px solid var(--line); padding-block: 22px; font-size: 13px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style></head><body>
+
+<header class="top wrap">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+      <circle cx="13" cy="13" r="11.5" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+      <circle cx="13" cy="13" r="7" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity=".6"/>
+      <circle cx="13" cy="13" r="3" fill="var(--signal)"/>
+    </svg>
+    BandoRadar
+  </div>
+</header>
+
+<main class="grid wrap">
+  <section class="pitch">
+    <p class="eyebrow">Fase pilota · gratuita</p>
+    <h1>Le gare pubbliche giuste, ogni mattina nella tua casella.</h1>
+    <p class="lede">Controlliamo ogni giorno i bandi europei (TED) e la banca dati ANAC, e ti mandiamo solo quelli adatti alla tua impresa. Bastano Partita IVA e codice ATECO: il profilo lo costruiamo noi.</p>
+
+    <ul class="facts">
+      <li>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="var(--signal)"/><path d="M5 9.3l2.6 2.6L13 6.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><b>Solo gare a cui puoi partecipare.</b> Escludiamo affidamenti diretti, procedure negoziate su invito ed esiti di gare già chiuse.</span>
+      </li>
+      <li>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="var(--signal)"/><path d="M5 9.3l2.6 2.6L13 6.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><b>Un punteggio di rilevanza</b> da 0 a 100 per ogni bando, con il motivo per cui ti riguarda.</span>
+      </li>
+      <li>
+        <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="9" fill="var(--signal)"/><path d="M5 9.3l2.6 2.6L13 6.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span><b>Nessuna piattaforma da imparare.</b> Un'email che leggi in trenta secondi. Se un giorno non c'è nulla di utile, non ti disturbiamo.</span>
+      </li>
+    </ul>
+
+    <div>
+      <div class="digest" aria-label="Esempio di digest">
+        <div class="digest-head"><span><b>BandoRadar</b> · 3 bandi per te oggi</span><span>esempio</span></div>
+        <div class="gara">
+          <div class="score">88</div>
+          <div><h3>Manutenzione straordinaria strade provinciali, lotto 2</h3>
+            <p>Provincia · procedura aperta · € 516.000 · scade tra 32 giorni<br>CPV <span class="code">45233141</span> compatibile con il tuo profilo</p></div>
+        </div>
+        <div class="gara">
+          <div class="score mid">64</div>
+          <div><h3>Riqualificazione marciapiedi e segnaletica, centro storico</h3>
+            <p>Comune · procedura aperta · € 398.400 · CIG <span class="code">B9X0000000</span></p></div>
+        </div>
+      </div>
+      <p class="digest-note">Esempio illustrativo: nel digest vero ci sono i bandi reali della tua zona.</p>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="titolo-modulo">
+    <div id="blocco-modulo">
+      <h2 id="titolo-modulo">Iscrivi la tua impresa</h2>
+      <p class="sub">Un mese di prova gratuita, senza impegno. L'iscrizione è immediata: ricevi subito una email di conferma.</p>
+
+      <form id="iscrizione" novalidate>
+        <div class="field" id="f-email">
+          <label for="email">Email aziendale</label>
+          <input id="email" name="email" type="email" autocomplete="email" placeholder="ufficiogare@impresa.it" required>
+          <p class="err" id="err-email" hidden>Inserisci un indirizzo email valido.</p>
+        </div>
+
+        <div class="field" id="f-piva">
+          <label for="piva">Partita IVA</label>
+          <input id="piva" name="partita_iva" type="text" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="01234567890" required>
+          <p class="err" id="err-piva" hidden></p>
+        </div>
+
+        <div class="field" id="f-ateco">
+          <label for="ateco">Codice ATECO</label>
+          <input id="ateco" name="ateco" type="text" inputmode="decimal" autocomplete="off" maxlength="10" placeholder="43.21.01" required>
+          <p class="hint">Il codice della tua attività principale. Lo trovi nella visura camerale; se non lo sai, chiedilo al commercialista.</p>
+          <p class="err" id="err-ateco" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="ragione">Ragione sociale <span class="opt">(facoltativa)</span></label>
+          <input id="ragione" name="ragione_sociale" type="text" autocomplete="organization" placeholder="Rossi Costruzioni Srl">
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="soa">Classifica SOA <span class="opt">(solo lavori)</span></label>
+            <select id="soa" name="classifica_soa">
+              <option value="">Non ho l'attestazione SOA</option>
+              <option value="I">I · fino a 258.000 €</option>
+              <option value="II">II · fino a 516.000 €</option>
+              <option value="III">III · fino a 1.033.000 €</option>
+              <option value="III-bis">III-bis · fino a 1.500.000 €</option>
+              <option value="IV">IV · fino a 2.582.000 €</option>
+              <option value="IV-bis">IV-bis · fino a 3.500.000 €</option>
+              <option value="V">V · fino a 5.165.000 €</option>
+              <option value="VI">VI · fino a 10.329.000 €</option>
+              <option value="VII">VII · fino a 15.494.000 €</option>
+              <option value="VIII">VIII · oltre 15.494.000 €</option>
+            </select>
+          </div>
+          <div class="field">
+          <label for="area">Dove lavori</label>
+          <select id="area" name="area">
+            <option>Tutta Italia</option>
+            <option>Abruzzo</option><option>Basilicata</option><option>Calabria</option><option>Campania</option>
+            <option>Emilia-Romagna</option><option>Friuli-Venezia Giulia</option><option>Lazio</option><option>Liguria</option>
+            <option>Lombardia</option><option>Marche</option><option>Molise</option><option>Piemonte</option>
+            <option>Puglia</option><option>Sardegna</option><option>Sicilia</option><option>Toscana</option>
+            <option>Trentino-Alto Adige</option><option>Umbria</option><option>Valle d'Aosta</option><option>Veneto</option>
+          </select>
+        </div>
+        </div>
+
+        <input class="hp" type="checkbox" name="botcheck" id="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+        <div class="field" id="f-consenso">
+          <label class="check" for="consenso">
+            <input id="consenso" name="consenso_privacy" type="checkbox" required>
+            <span>Ho letto l'<a href="#privacy">informativa privacy</a> e acconsento al trattamento dei dati per ricevere il servizio.</span>
+          </label>
+          <p class="err" id="err-consenso" hidden>Serve il consenso per poterti inviare i bandi.</p>
+        </div>
+
+        <button type="submit" id="invia">Iscrivimi alla prova gratuita</button>
+        <div id="esito" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <details class="privacy" id="privacy">
+      <summary>Informativa privacy</summary>
+      <p><b>Titolare:</b> Giovanni Tognozzi, progetto BandoRadar. Contatto: <span>giovanni.tognozzi@gmail.com</span></p>
+      <p><b>Dati raccolti:</b> email, Partita IVA, ragione sociale, codice ATECO, classifica SOA e area di attività.</p>
+      <p><b>Finalità:</b> iscriverti al servizio, inviarti la conferma e la selezione dei bandi pubblici adatti alla tua impresa. Ogni email contiene il link per annullare l'iscrizione. Base giuridica: il tuo consenso (art. 6.1.a GDPR).</p>
+      <p><b>Conservazione:</b> fino alla revoca del consenso. Non cediamo i dati a terzi. Le iscrizioni sono archiviate in un foglio Google Workspace del titolare (Google è il fornitore tecnico).</p>
+      <p><b>I tuoi diritti:</b> accesso, rettifica, cancellazione, limitazione, portabilità e revoca del consenso in qualsiasi momento (artt. 15-22 GDPR), scrivendo al contatto sopra. Puoi presentare reclamo al Garante per la protezione dei dati personali.</p>
+    </details>
+  </section>
+</main>
+
+<footer class="wrap">BandoRadar · Monitoraggio di gare e appalti pubblici per le imprese italiane · Fonti: TED (Unione Europea) e ANAC</footer>
+
+<script>
+// Indirizzo dell'app web Google Apps Script che salva l'iscrizione e manda la conferma.
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbw2v_19UECrelUGposyRbOwebAxJjCYJ6U761e9FUlOpqEkbIA52HzYIpHoCUewE1Ey/exec";
+
+// Controllo Partita IVA italiana (11 cifre + cifra di controllo, algoritmo dell'Agenzia delle Entrate)
+function pivaValida(raw) {
+  const s = raw.replace(/\s+/g, "").replace(/^IT/i, "");
+  if (!/^\d{11}$/.test(s)) return { ok: false, motivo: "La Partita IVA ha 11 cifre, senza lettere." };
+  let tot = 0;
+  for (let i = 0; i < 10; i++) {
+    let d = +s[i];
+    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }
+    tot += d;
+  }
+  const controllo = (10 - (tot % 10)) % 10;
+  if (controllo !== +s[10]) return { ok: false, motivo: "Questa Partita IVA non è valida: controlla le cifre." };
+  return { ok: true, valore: s };
+}
+
+const form = document.getElementById("iscrizione");
+const esito = document.getElementById("esito");
+const bottone = document.getElementById("invia");
+
+function segna(campoId, errId, messaggio) {
+  const campo = document.getElementById(campoId), err = document.getElementById(errId);
+  if (messaggio) { campo.classList.add("invalid"); err.textContent = messaggio; err.hidden = false; }
+  else { campo.classList.remove("invalid"); err.hidden = true; }
+  return !messaggio;
+}
+
+function atecoValido(v) {
+  const cifre = String(v || "").replace(/[^\d]/g, "");
+  return cifre.length >= 2 && cifre.length <= 6;
+}
+
+function valida() {
+  const email = document.getElementById("email").value.trim();
+  const p = pivaValida(document.getElementById("piva").value);
+  let ok = true;
+  ok = segna("f-email", "err-email", /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? "" : "Inserisci un indirizzo email valido.") && ok;
+  ok = segna("f-piva", "err-piva", p.ok ? "" : p.motivo) && ok;
+  ok = segna("f-ateco", "err-ateco", atecoValido(document.getElementById("ateco").value) ? "" :
+             "Inserisci il codice ATECO, per esempio 43.21.01 (da 2 a 6 cifre).") && ok;
+  ok = segna("f-consenso", "err-consenso", document.getElementById("consenso").checked ? "" : "Serve il consenso per poterti inviare i bandi.") && ok;
+  return ok ? p.valore : null;
+}
+
+["email", "piva", "ateco", "consenso"].forEach(id =>
+  document.getElementById(id).addEventListener("change", () => { if (form.dataset.provato) valida(); }));
+
+function mostra(tipo, titolo, testo) {
+  esito.className = "esito " + tipo;
+  esito.innerHTML = "";
+  const h = document.createElement("h3"); h.textContent = titolo;
+  const p = document.createElement("p"); p.textContent = testo;
+  esito.append(h, p);
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  form.dataset.provato = "1";
+  esito.className = ""; esito.textContent = "";
+  const piva = valida();
+  if (!piva) return;
+
+  if (ENDPOINT.startsWith("INSERISCI")) {
+    mostra("ko", "Modulo non ancora collegato", "Questa è un'anteprima: i dati sono validi, ma la pagina non è ancora collegata al foglio delle iscrizioni.");
+    return;
+  }
+
+  bottone.disabled = true; bottone.textContent = "Invio in corso…";
+  const emailInserita = document.getElementById("email").value.trim();
+  const dati = {
+    email: document.getElementById("email").value.trim(),
+    partita_iva: piva,
+    ragione_sociale: document.getElementById("ragione").value.trim(),
+    ateco: document.getElementById("ateco").value.trim(),
+    classifica_soa: document.getElementById("soa").value,
+    area: document.getElementById("area").value,
+    consenso_privacy: true,
+    botcheck: document.getElementById("botcheck").checked
+  };
+  try {
+    // corpo in text/plain: Google Apps Script non gestisce le richieste preliminari CORS
+    const r = await fetch(ENDPOINT, { method: "POST", body: JSON.stringify(dati) });
+    const j = await r.json().catch(() => ({}));
+    if (j.ok) {
+      form.reset(); delete form.dataset.provato;
+      if (j.giaIscritta) {
+        mostra("ok", "Eri già iscritto", "Abbiamo aggiornato i tuoi dati. Trovi una conferma all'indirizzo " + emailInserita + ".");
+      } else {
+        mostra("ok", "Iscrizione completata", "Ti abbiamo inviato una email di conferma a " + emailInserita + ". Se non la trovi, controlla lo spam.");
+      }
+    } else {
+      mostra("ko", "Iscrizione non inviata", j.errore || "Il server non ha risposto. Riprova tra qualche minuto.");
+    }
+  } catch (err) {
+    mostra("ko", "Iscrizione non inviata", "Connessione non riuscita. Controlla la rete e riprova.");
+  } finally {
+    bottone.disabled = false; bottone.textContent = "Iscrivimi alla prova gratuita";
+  }
+});
+</script>
+</body></html>
