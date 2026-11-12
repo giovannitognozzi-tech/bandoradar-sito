@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BandoRadar</title>
+<meta name="description" content="Le gare pubbliche adatte alla tua impresa, prima che scadano: ogni mattina nella tua email e nella tua area personale.">
+<meta name="theme-color" content="#0B2545">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230B2545'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%237FA6F8' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%237FA6F8' stroke-width='2' opacity='.6'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%233DDC97'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@600;700;800;900&family=Red+Hat+Text:wght@400;500;600;700&display=swap">
+<style>
+/* BandoRadar: una pagina sola con tre viste (presentazione, accesso, area personale).
+   L'idea grafica è lo scadenzario: di ogni gara la prima cosa che si vede è la data entro cui muoversi
+   (stesso blocco della mail). In testa, il radar che dà il nome al servizio. */
+:root {
+  --ink: #0B2545;        /* blu notte del marchio */
+  --bg: #F4F6FA;
+  --surface: #FFFFFF;
+  --text: #16243A;
+  --muted: #586A82;
+  --line: #DCE3EE;
+  --accent: #1A56DB;     /* blu BandoRadar */
+  --accent-ink: #FFFFFF;
+  --signal: #0B7A45;     /* verde "gara trovata" */
+  --error: #B42318;
+  --tint: #EAF0FB; --tint-line: #CBD8F0;
+  --viola: #5B3A8C; --viola-bg: #F1EAFB;     /* manifestazioni di interesse */
+  --arancio: #9A5300; --arancio-bg: #FFF1DC; --arancio-line: #F1D5A8; /* scadenza vicina */
+  --notte: #0B2545; --notte-2: #123463; --notte-testo: #FFFFFF; --notte-muto: #B9C7DD; --blip: #3DDC97;
+  --font-display: "Red Hat Display", "Segoe UI", system-ui, Arial, sans-serif;
+  --font-body: "Red Hat Text", "Segoe UI", system-ui, Arial, sans-serif;
+  --font-code: ui-monospace, "SFMono-Regular", Consolas, "Courier New", monospace;
+  --raggio: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #E8EEF8; --bg: #0A1626; --surface: #112038; --text: #E4ECF8; --muted: #9AABC2;
+    --line: #243753; --accent: #6C9BF5; --accent-ink: #0A1626; --signal: #4FD494; --error: #F28B7D;
+    --tint: #16294A; --tint-line: #2A4270; --viola: #CDB8F2; --viola-bg: #2B2244;
+    --arancio: #F2B56E; --arancio-bg: #3A2A14; --arancio-line: #5A4220;
+    --notte: #0E2444; --notte-2: #16376A; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #E8EEF8; --bg: #0A1626; --surface: #112038; --text: #E4ECF8; --muted: #9AABC2;
+  --line: #243753; --accent: #6C9BF5; --accent-ink: #0A1626; --signal: #4FD494; --error: #F28B7D;
+  --tint: #16294A; --tint-line: #2A4270; --viola: #CDB8F2; --viola-bg: #2B2244;
+  --arancio: #F2B56E; --arancio-bg: #3A2A14; --arancio-line: #5A4220;
+  --notte: #0E2444; --notte-2: #16376A; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--font-display); color: var(--ink); margin: 0; letter-spacing: -.015em; }
+a { color: var(--accent); }
+.salta { position: absolute; left: -9999px; }
+.salta:focus { left: 12px; top: 12px; background: var(--surface); padding: 8px 12px; border-radius: 8px; z-index: 10; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; }
+
+/* ---------- testata ---------- */
+.testa { background: var(--notte); color: var(--notte-testo); }
+.testa .riga { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px; }
+.marchio { display: inline-flex; align-items: center; gap: 10px; font: 800 18px/1 var(--font-display); color: var(--notte-testo); text-decoration: none; letter-spacing: -.01em; }
+.testa nav { display: flex; align-items: center; gap: 6px; }
+.testa nav a.voce { color: var(--notte-muto); text-decoration: none; font-weight: 600; font-size: 15px; padding: 8px 10px; border-radius: 8px; }
+.testa nav a.voce:hover { color: var(--notte-testo); }
+@media (max-width: 560px) { .testa nav a.voce { display: none; } }
+@media (max-width: 480px) { .testa nav #nav-registrati { display: none; } }   /* sul telefono c'è già il bottone subito sotto */
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 700 15px/1.2 var(--font-body); border-radius: 10px;
+       padding: 11px 18px; border: 1px solid transparent; cursor: pointer; text-decoration: none; white-space: nowrap; transition: filter .15s, background .15s; }
+.btn.pieno { background: var(--accent); color: var(--accent-ink); }
+.btn.pieno:hover { filter: brightness(1.1); }
+.btn.contorno { background: transparent; color: var(--accent); border-color: var(--line); }
+.btn.contorno:hover { background: var(--tint); }
+.btn.chiaro { background: #FFFFFF; color: #0B2545; }
+.btn.chiaro:hover { filter: brightness(.95); }
+.btn.velato { background: rgba(255,255,255,.1); color: #FFFFFF; border-color: rgba(255,255,255,.28); }
+.btn.velato:hover { background: rgba(255,255,255,.18); }
+.btn.pericolo { background: var(--error); color: #FFFFFF; }
+.btn.piccolo { padding: 8px 13px; font-size: 14px; border-radius: 8px; }
+.btn.grande { padding: 14px 22px; font-size: 16px; }
+.btn[disabled] { opacity: .6; cursor: progress; }
+.come-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- presentazione: il radar e lo scadenzario ---------- */
+.eroe { background: var(--notte); color: var(--notte-testo); position: relative; overflow: hidden; }
+.eroe .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 48px; align-items: center; padding-block: 44px 72px; }
+@media (max-width: 900px) { .eroe .wrap { grid-template-columns: minmax(0, 1fr); gap: 36px; padding-block: 28px 52px; } }
+.eroe h1 { color: var(--notte-testo); font-weight: 900; font-size: clamp(2.2rem, 5vw, 3.7rem); line-height: 1.04; letter-spacing: -.03em; text-wrap: balance; }
+.eroe .lede { color: var(--notte-muto); font-size: 1.14rem; max-width: 33em; margin: 20px 0 0; }
+.eroe .azioni { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.eroe .nota { color: var(--notte-muto); font-size: 14px; margin: 16px 0 0; }
+.radar { position: absolute; right: -180px; top: 50%; width: 900px; height: 900px; transform: translateY(-50%); pointer-events: none; }
+@media (max-width: 900px) { .radar { right: -420px; top: 62%; } }
+.radar .giro { transform-origin: 450px 450px; animation: giro 3.2s cubic-bezier(.4, .1, .3, 1) 1 both; }
+.radar .blip { opacity: 0; animation: blip .5s ease-out forwards; }
+@keyframes giro { from { transform: rotate(-150deg); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } to { transform: rotate(210deg); opacity: 0; } }
+@keyframes blip { from { opacity: 0; r: 0; } to { opacity: 1; } }
+
+.vetrina { position: relative; }
+.vetrina .foglio { background: var(--surface); color: var(--text); border-radius: 16px; padding: 14px; box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .55); }
+.vetrina .testa-foglio { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; color: var(--muted); padding: 2px 4px 10px; }
+.vetrina .testa-foglio b { color: var(--ink); font-family: var(--font-display); font-size: 15px; }
+.vetrina .gara { animation: entra .5s ease-out both; }
+.vetrina .gara:nth-of-type(1) { animation-delay: .7s; } .vetrina .gara:nth-of-type(2) { animation-delay: 1.3s; } .vetrina .gara:nth-of-type(3) { animation-delay: 1.9s; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.vetrina .didascalia { color: var(--notte-muto); font-size: 13px; margin: 12px 4px 0; }
+
+/* ---------- la gara: scadenza a sinistra, il resto a destra (come nella mail) ---------- */
+.gara { display: grid; grid-template-columns: 78px minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: var(--raggio); overflow: hidden; }
+.gara + .gara { margin-top: 12px; }
+.gara .quando { background: var(--tint); color: var(--ink); text-align: center; padding: 15px 5px 13px; }
+.gara .quando .giorno { font: 800 28px/1 var(--font-display); }
+.gara .quando .mese { font: 700 14px/1.5 var(--font-body); }
+.gara .quando .manca { font: 600 11px/1.35 var(--font-body); color: var(--muted); margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--tint-line); }
+.gara .quando .senza { font: 500 12px/1.4 var(--font-body); color: var(--muted); }
+.gara.urgente .quando { background: var(--arancio-bg); color: var(--arancio); }
+.gara.urgente .quando .manca { color: var(--arancio); border-top-color: var(--arancio-line); }
+.gara .quando { grid-row: 1 / span 2; }
+.gara .corpo { padding: 13px 15px; min-width: 0; }
+/* nell'elenco dell'area personale importo, affinità e link stanno in un blocco a parte: sotto al titolo
+   sul telefono, in una colonna a destra sugli schermi larghi (così 200 gare si scorrono in fretta) */
+.gara.riga .corpo { padding-bottom: 2px; }
+.gara .lato { grid-column: 2; padding: 0 15px 13px; min-width: 0; }
+.gara .lato .affinita { margin-top: 4px; }
+.gara .lato .affinita span::before { content: ": "; }
+@media (min-width: 900px) {
+  .gara.riga { grid-template-columns: 78px minmax(0, 1fr) 256px; }
+  .gara.riga .quando { grid-row: auto; }
+  .gara.riga .corpo { padding-bottom: 13px; }
+  .gara.riga .lato { grid-column: 3; padding: 13px 16px; border-left: 1px solid var(--line); }
+  .gara.riga .lato .importo { font-size: 15px; }
+  .gara.riga .lato .affinita b { display: block; }
+  .gara.riga .lato .affinita span::before { content: none; }
+}
+.gara h3 { font: 700 16px/1.36 var(--font-body); letter-spacing: 0; color: var(--ink); overflow-wrap: anywhere; }
+.gara p { margin: 0; font-size: 14px; line-height: 1.5; }
+.gara .ente { margin-top: 5px; } .gara .ente span, .gara .importo span { color: var(--muted); }
+.gara .importo b { color: var(--ink); }
+.gara .nota { color: var(--viola); font-size: 13px; margin-top: 6px; }
+.gara .avviso { color: var(--arancio); font-size: 13px; margin-top: 6px; }
+.gara .affinita { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.gara .affinita b.alta { color: var(--signal); } .gara .affinita b.media { color: var(--accent); }
+.gara .mosse { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 12px; }
+.gara .mosse a.doc { font-weight: 700; font-size: 14px; text-decoration: none; }
+.gara .cig-solo { margin-top: 12px; padding: 9px 12px; border: 1px dashed var(--tint-line); border-radius: 8px; font-size: 12px; color: var(--muted); }
+.gara .cig-solo b { display: block; font: 700 17px/1.4 var(--font-code); letter-spacing: 1.5px; color: var(--ink); }
+.gara .cig { font-size: 12px; color: var(--muted); margin-top: 6px; } .gara .cig code { font-family: var(--font-code); }
+.etichetta { display: inline-block; font: 700 11px/1.6 var(--font-body); border-radius: 4px; padding: 1px 7px; margin: 0 6px 4px 0; }
+.etichetta.viola { color: var(--viola); background: var(--viola-bg); }
+.etichetta.grigia { color: var(--muted); background: var(--bg); }
+.etichetta.verde { color: var(--signal); background: color-mix(in srgb, var(--signal) 13%, var(--surface)); }
+.finto { display: inline-flex; align-items: center; font: 700 14px/1.2 var(--font-body); border-radius: 8px; padding: 8px 13px; background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- sezioni della presentazione ---------- */
+.sezione { padding-block: 72px; }
+@media (max-width: 700px) { .sezione { padding-block: 48px; } }
+.sezione h2 { font-weight: 800; font-size: clamp(1.6rem, 3.2vw, 2.3rem); line-height: 1.12; max-width: 20em; text-wrap: balance; }
+.sezione .intro { color: var(--muted); font-size: 1.05rem; max-width: 38em; margin: 12px 0 0; }
+.passi { list-style: none; margin: 36px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; counter-reset: passo; }
+@media (max-width: 800px) { .passi { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
+.passi li { counter-increment: passo; border-top: 3px solid var(--ink); padding-top: 16px; }
+.passi li::before { content: counter(passo); display: block; font: 900 44px/1 var(--font-display); color: var(--accent); margin-bottom: 10px; }
+.passi h3 { font-weight: 800; font-size: 1.15rem; }
+.passi p { margin: 6px 0 0; color: var(--muted); }
+
+.anatomia { background: var(--surface); border-block: 1px solid var(--line); }
+.anatomia .due { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 48px; align-items: center; margin-top: 36px; }
+@media (max-width: 900px) { .anatomia .due { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+.anatomia dl { margin: 0; display: grid; gap: 16px; }
+.anatomia dt { font: 800 1.02rem/1.3 var(--font-display); color: var(--ink); }
+.anatomia dd { margin: 2px 0 0; color: var(--muted); }
+.anatomia .gara { box-shadow: 0 24px 50px -32px rgba(11, 37, 69, .45); }
+
+.registrazione .due { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 56px; align-items: start; }
+@media (max-width: 900px) { .registrazione .due { grid-template-columns: minmax(0, 1fr); gap: 28px; } }
+.registrazione ul { margin: 22px 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.registrazione li { padding-left: 28px; position: relative; }
+.registrazione li::before { content: ""; position: absolute; left: 0; top: 7px; width: 14px; height: 8px; border-left: 3px solid var(--signal); border-bottom: 3px solid var(--signal); transform: rotate(-45deg); }
+
+/* ---------- moduli ---------- */
+.pannello { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+@media (max-width: 480px) { .pannello { padding: 20px 18px; } }
+form { display: grid; gap: 18px; }
+.campo { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.coppia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px; }
+@media (max-width: 560px) { .coppia { grid-template-columns: minmax(0, 1fr); } }
+label, legend { font-size: 14px; font-weight: 700; color: var(--ink); }
+.facoltativo { font-weight: 400; color: var(--muted); }
+input[type=email], input[type=text], input[type=password], input[type=search], select, textarea {
+  width: 100%; font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; }
+textarea { resize: vertical; min-height: 72px; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .75; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--accent); }
+input:disabled { background: transparent; color: var(--muted); border-style: dashed; }
+.aiuto { font-size: 13px; color: var(--muted); margin: 0; }
+.errore { font-size: 13px; color: var(--error); margin: 0; font-weight: 600; }
+.campo.sbagliato input, .campo.sbagliato select, .campo.sbagliato .regioni { border-color: var(--error); }
+.con-occhio { position: relative; }
+.con-occhio input { padding-right: 84px; }
+.con-occhio button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; font: 600 13px var(--font-body); color: var(--accent); cursor: pointer; padding: 8px; border-radius: 6px; }
+#piva, #m-piva { font-family: var(--font-code); letter-spacing: .06em; }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+fieldset legend { padding: 0; margin-bottom: 8px; }
+.scelta { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.scelta label, .regioni label { display: inline-flex; align-items: center; gap: 8px; font-weight: 400; font-size: 15px; color: var(--text); cursor: pointer; }
+.scelta input, .regioni input { width: 17px; height: 17px; margin: 0; flex: none; accent-color: var(--accent); }
+.regioni { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; margin-top: 10px; padding: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+@media (min-width: 620px) { .regioni { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.regioni label { font-size: 14px; }
+.spunta { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; font-size: 14px; font-weight: 400; color: var(--muted); }
+.spunta input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent); }
+.trappola { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.esito { border-radius: 10px; padding: 14px 16px; font-size: 15px; }
+.esito.ok { background: color-mix(in srgb, var(--signal) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--signal) 40%, transparent); }
+.esito.ko { background: color-mix(in srgb, var(--error) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--error) 40%, transparent); }
+.esito b { display: block; color: var(--ink); }
+
+/* ---------- accesso ---------- */
+.stretta { max-width: 460px; margin: 0 auto; padding-block: 56px 80px; }
+.stretta h1 { font-weight: 800; font-size: 1.9rem; }
+.stretta .sotto { color: var(--muted); margin: 6px 0 22px; }
+.stretta .dopo { margin-top: 18px; font-size: 14px; color: var(--muted); }
+
+/* ---------- area personale ---------- */
+.area-testa { background: var(--notte); color: var(--notte-testo); }
+.area-testa .wrap { padding-block: 26px 0; }
+.area-testa h1 { color: var(--notte-testo); font-weight: 800; font-size: clamp(1.5rem, 3.4vw, 2.1rem); overflow-wrap: anywhere; }
+.area-testa .riassunto { color: var(--notte-muto); margin: 6px 0 0; }
+.area-testa .riassunto b { color: #FFD79A; font-weight: 700; }
+.dati-brevi { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+.dati-brevi li { font-size: 13px; font-weight: 600; color: var(--notte-testo); background: rgba(255,255,255,.1); border-radius: 999px; padding: 4px 12px; }
+.schede { display: flex; gap: 4px; margin-top: 22px; overflow-x: auto; }
+.schede button { font: 700 15px var(--font-body); color: var(--notte-muto); background: none; border: 0; border-radius: 10px 10px 0 0; padding: 11px 16px; cursor: pointer; white-space: nowrap; }
+.schede button[aria-selected=true] { background: var(--bg); color: var(--ink); }
+@media (max-width: 480px) { .schede button { font-size: 14px; padding: 10px 10px; } }
+.area-corpo { padding-block: 22px 72px; }
+.benvenuto { margin-bottom: 18px; }
+.cerca { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 8px 0 10px; }
+.filtri { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.filtri button { font: 600 13px var(--font-body); color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px; cursor: pointer; }
+.filtri button[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filtri .ordine { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.filtri .ordine select { width: auto; font-size: 13px; padding: 6px 8px; border-radius: 8px; background: var(--surface); }
+.conta { font-size: 13px; color: var(--muted); margin: 10px 0 12px; }
+.vuoto { color: var(--muted); padding: 28px 0; }
+.carico { color: var(--muted); padding: 40px 0; text-align: center; }
+.blocco { margin-top: 26px; }
+.blocco:first-child { margin-top: 0; }
+.blocco h2 { font-weight: 800; font-size: 1.25rem; margin-bottom: 4px; }
+.blocco h2 + form { margin-top: 14px; }
+#scheda-impresa { max-width: 780px; }
+.blocco > p.sotto { color: var(--muted); margin: 0 0 16px; }
+.voci { margin: 0 0 20px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.voci li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 15px; }
+.voci code { font: 700 14px var(--font-code); color: var(--ink); margin-right: 8px; }
+.voci small { display: block; color: var(--arancio); margin-top: 2px; }
+.due-colonne { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+@media (max-width: 800px) { .due-colonne { grid-template-columns: minmax(0, 1fr); } }
+.pericolosa { border-color: color-mix(in srgb, var(--error) 35%, var(--line)); }
+
+footer { border-top: 1px solid var(--line); padding-block: 26px 40px; font-size: 13.5px; color: var(--muted); }
+footer details summary { cursor: pointer; color: var(--ink); font-weight: 700; }
+footer details p { margin: 8px 0 0; max-width: 72ch; }
+footer .fonti { margin: 0 0 14px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } .radar .blip { opacity: 1; } .radar .giro { display: none; } }
+</style>
+</head>
+<body>
+<a class="salta" href="#contenuto">Vai al contenuto</a>
+
+<header class="testa">
+  <div class="wrap riga">
+    <a class="marchio" href="#inizio" aria-label="BandoRadar, pagina iniziale">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+        <circle cx="13" cy="13" r="11.5" fill="none" stroke="#7FA6F8" stroke-width="1.5"/>
+        <circle cx="13" cy="13" r="7" fill="none" stroke="#7FA6F8" stroke-width="1.5" opacity=".6"/>
+        <circle cx="13" cy="13" r="3" fill="#3DDC97"/>
+      </svg>
+      BandoRadar
+    </a>
+    <nav aria-label="Principale">
+      <a class="voce" href="#come-funziona" data-per="ospite">Come funziona</a>
+      <a class="btn velato piccolo" href="#accedi" data-per="ospite" id="nav-accedi">Accedi</a>
+      <a class="btn chiaro piccolo" href="#registrati" data-per="ospite" id="nav-registrati">Crea l'account</a>
+      <a class="btn chiaro piccolo" href="#area" data-per="iscritto" id="nav-area" hidden>La tua area</a>
+      <button type="button" class="btn velato piccolo" data-per="area" id="nav-esci" hidden>Esci</button>
+    </nav>
+  </div>
+</header>
+
+<main id="contenuto">
+<noscript><p class="wrap" style="padding-block:16px;font-weight:700">Per creare l'account ed entrare nell'area personale serve JavaScript attivo nel browser.</p></noscript>
+
+<!-- ======================================================= PRESENTAZIONE -->
+<div id="vista-home">
+  <section class="eroe" id="inizio">
+    <svg class="radar" viewBox="0 0 900 900" aria-hidden="true">
+      <defs>
+        <linearGradient id="fascio" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3DDC97" stop-opacity="0"/><stop offset="1" stop-color="#3DDC97" stop-opacity=".34"/></linearGradient>
+      </defs>
+      <g fill="none" stroke="#FFFFFF" stroke-opacity=".09" stroke-width="1.5">
+        <circle cx="450" cy="450" r="110"/><circle cx="450" cy="450" r="220"/><circle cx="450" cy="450" r="330"/><circle cx="450" cy="450" r="440"/>
+        <path d="M450 10V890M10 450H890"/>
+      </g>
+      <g class="giro"><path d="M450 450 L890 450 A440 440 0 0 0 831 230 Z" fill="url(#fascio)"/><path d="M450 450H890" stroke="#3DDC97" stroke-opacity=".7" stroke-width="2"/></g>
+      <g fill="#3DDC97">
+        <circle class="blip" cx="300" cy="330" r="6" style="animation-delay:.7s"/><circle class="blip" cx="250" cy="560" r="6" style="animation-delay:1.3s"/>
+        <circle class="blip" cx="520" cy="650" r="6" style="animation-delay:1.9s"/><circle class="blip" cx="610" cy="250" r="5" style="animation-delay:2.3s" opacity=".6"/>
+        <circle class="blip" cx="118" cy="640" r="6" style="animation-delay:1.6s"/>
+        <circle class="blip" cx="672" cy="150" r="5" style="animation-delay:2.1s" opacity=".7"/>
+      </g>
+    </svg>
+    <div class="wrap">
+      <div>
+        <h1>Le gare pubbliche per la tua impresa, prima che scadano.</h1>
+        <p class="lede">Ogni mattina leggiamo i bandi europei e la Pubblicità legale ANAC e teniamo solo le gare a cui puoi partecipare. Le trovi nella tua email e nella tua area personale, in ordine di scadenza.</p>
+        <div class="azioni">
+          <a class="btn chiaro grande" href="#registrati" data-per="ospite">Crea l'account</a>
+          <a class="btn velato grande" href="#accedi" data-per="ospite">Accedi</a>
+          <a class="btn chiaro grande" href="#area" data-per="iscritto" hidden>Vai alla tua area</a>
+        </div>
+        <p class="nota">Un mese di prova gratuita. Elimini l'account quando vuoi.</p>
+      </div>
+      <div class="vetrina" aria-label="Esempio di gare segnalate">
+        <div class="foglio">
+          <div class="testa-foglio"><b>3 gare nuove per la tua impresa</b><span>esempio</span></div>
+          <article class="gara urgente">
+            <div class="quando"><div class="giorno" data-giorno="6">6</div><div class="mese" data-mese="6">nov</div><div class="manca">tra 6 giorni</div></div>
+            <div class="corpo">
+              <span class="etichetta viola">Manifestazione di interesse</span>
+              <h3>Rifacimento di marciapiedi e segnaletica nel centro storico</h3>
+              <p class="ente">Comune<span>, Toscana</span></p>
+              <p class="importo"><b>€ 98.400</b></p>
+              <p class="affinita"><b class="alta">● Affinità alta</b>: nel testo «segnaletica», «marciapiedi»</p>
+            </div>
+          </article>
+          <article class="gara">
+            <div class="quando"><div class="giorno" data-giorno="23">23</div><div class="mese" data-mese="23">nov</div><div class="manca">tra 23 giorni</div></div>
+            <div class="corpo">
+              <h3>Manutenzione straordinaria delle strade provinciali, lotto 2</h3>
+              <p class="ente">Provincia<span>, Toscana</span></p>
+              <p class="importo"><b>€ 516.000</b></p>
+              <p class="affinita"><b class="alta">● Affinità alta</b>: settore compatibile, nel testo «manto stradale»</p>
+            </div>
+          </article>
+          <article class="gara">
+            <div class="quando"><div class="giorno" data-giorno="32">32</div><div class="mese" data-mese="32">dic</div><div class="manca">tra 32 giorni</div></div>
+            <div class="corpo">
+              <h3>Accordo quadro per lavori edili negli edifici scolastici</h3>
+              <p class="ente">Città metropolitana<span>, Toscana</span></p>
+              <p class="importo"><b>da € 240.000 a lotto</b><span> (3 lotti)</span></p>
+              <p class="affinita"><b class="media">● Affinità media</b>: settore compatibile</p>
+            </div>
+          </article>
+        </div>
+        <p class="didascalia">Esempio illustrativo. Nella tua area ci sono le gare vere, con il link al bando ufficiale.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione wrap" id="come-funziona">
+    <h2>Dalla Partita IVA alle gare giuste, in tre passaggi</h2>
+    <ol class="passi">
+      <li><h3>Registri l'impresa</h3><p>Bastano Partita IVA, codice ATECO e le regioni in cui lavori. Il profilo di gara lo costruiamo noi.</p></li>
+      <li><h3>Ogni mattina leggiamo le fonti ufficiali</h3><p>I bandi europei (TED) e la Pubblicità legale ANAC, dove escono tutte le gare italiane. Scartiamo affidamenti diretti ed esiti di gare già chiuse.</p></li>
+      <li><h3>Ricevi solo quelle adatte a te</h3><p>Un'email che leggi in trenta secondi e un'area personale con tutte le gare aperte. Se un giorno non c'è nulla di utile, non ti disturbiamo.</p></li>
+    </ol>
+  </section>
+
+  <section class="sezione anatomia">
+    <div class="wrap">
+      <h2>Di ogni gara, quello che serve per decidere</h2>
+      <div class="due">
+        <article class="gara">
+          <div class="quando"><div class="giorno" data-giorno="18">18</div><div class="mese" data-mese="18">nov</div><div class="manca">tra 18 giorni</div></div>
+          <div class="corpo">
+            <h3>Servizio di pulizia e sanificazione delle sedi comunali</h3>
+            <p class="ente">Comune di Arezzo<span>, Toscana</span></p>
+            <p class="importo"><b>€ 312.000</b></p>
+            <p class="affinita"><b class="alta">● Affinità alta</b>: settore compatibile, nel testo «pulizia», «sanificazione»</p>
+            <div class="mosse"><span class="finto">Apri il bando</span><span style="color:var(--accent);font-weight:700;font-size:14px">Documenti di gara ↗</span></div>
+          </div>
+        </article>
+        <dl>
+          <div><dt>La scadenza, per prima</dt><dd>Giorno, mese e quanto manca. Diventa arancione quando restano meno di sette giorni.</dd></div>
+          <div><dt>Che cosa si compra e chi lo compra</dt><dd>L'oggetto riscritto in chiaro, senza formule burocratiche, con l'ente e la regione.</dd></div>
+          <div><dt>Quanto vale</dt><dd>L'importo a base di gara. Per le gare a lotti, quello del lotto più piccolo: te ne basta uno alla tua portata.</dd></div>
+          <div><dt>Quanto è vicina al tuo lavoro</dt><dd>Affinità alta, media o da valutare, con il perché: il settore della gara e le parole che abbiamo trovato.</dd></div>
+          <div><dt>Il bando vero</dt><dd>Il link alla pagina ufficiale e, quando l'ente li pubblica, ai documenti di gara.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="sezione wrap registrazione" id="registrati">
+    <div class="due">
+      <div>
+        <h2>Crea l'account della tua impresa</h2>
+        <p class="intro">Un mese di prova gratuita, senza impegno. L'iscrizione è immediata: entri subito nell'area personale e trovi le gare aperte adatte a te.</p>
+        <ul>
+          <li>Ricevi una mail solo nei giorni in cui escono gare utili.</li>
+          <li>Nell'area personale cambi codici ATECO e regioni quando vuoi.</li>
+          <li>Elimini l'account da solo, in un minuto.</li>
+        </ul>
+      </div>
+      <div class="pannello">
+        <form id="iscrizione" novalidate>
+          <div class="coppia">
+            <div class="campo" id="f-email">
+              <label for="email">Email aziendale</label>
+              <input id="email" name="email" type="email" autocomplete="email" placeholder="ufficiogare@impresa.it" required>
+              <p class="errore" id="err-email" hidden></p>
+            </div>
+            <div class="campo" id="f-password">
+              <label for="password">Password</label>
+              <div class="con-occhio">
+                <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required>
+                <button type="button" data-mostra="password" aria-pressed="false">Mostra</button>
+              </div>
+              <p class="aiuto">Almeno 8 caratteri.</p>
+              <p class="errore" id="err-password" hidden></p>
+            </div>
+          </div>
+          <div class="coppia">
+            <div class="campo" id="f-piva">
+              <label for="piva">Partita IVA</label>
+              <input id="piva" name="partita_iva" type="text" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="01234567890" required>
+              <p class="errore" id="err-piva" hidden></p>
+            </div>
+            <div class="campo">
+              <label for="ragione">Ragione sociale <span class="facoltativo">(facoltativa)</span></label>
+              <input id="ragione" name="ragione_sociale" type="text" autocomplete="organization" placeholder="Rossi Costruzioni Srl">
+            </div>
+          </div>
+          <div class="coppia">
+            <div class="campo" id="f-ateco">
+              <label for="ateco">Codice ATECO</label>
+              <input id="ateco" name="ateco" type="text" inputmode="decimal" autocomplete="off" maxlength="10" placeholder="43.21.01" required>
+              <p class="aiuto">Quello dell'attività principale: è nella visura camerale.</p>
+              <p class="errore" id="err-ateco" hidden></p>
+            </div>
+            <div class="campo" id="f-altri">
+              <label for="altri">Altri codici ATECO <span class="facoltativo">(facoltativi)</span></label>
+              <input id="altri" name="ateco_altri" type="text" inputmode="decimal" autocomplete="off" maxlength="60" placeholder="47.73.10, 86.90.29">
+              <p class="aiuto">Fino a 3, separati da una virgola.</p>
+              <p class="errore" id="err-altri" hidden></p>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="soa">Classifica SOA <span class="facoltativo">(solo per chi fa lavori)</span></label>
+            <select id="soa" name="classifica_soa"></select>
+          </div>
+          <fieldset class="campo" id="f-area">
+            <legend>Dove lavori</legend>
+            <div class="scelta">
+              <label><input type="radio" name="area_tipo" value="italia" checked> Tutta Italia</label>
+              <label><input type="radio" name="area_tipo" value="regioni"> Solo alcune regioni</label>
+            </div>
+            <div class="regioni" id="regioni" hidden></div>
+            <p class="errore" id="err-area" hidden></p>
+          </fieldset>
+          <input class="trappola" type="checkbox" name="botcheck" id="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div class="campo" id="f-consenso">
+            <label class="spunta" for="consenso">
+              <input id="consenso" name="consenso_privacy" type="checkbox" required>
+              <span>Ho letto l'<a href="#privacy">informativa privacy</a> e acconsento al trattamento dei dati per ricevere il servizio.</span>
+            </label>
+            <p class="errore" id="err-consenso" hidden></p>
+          </div>
+          <button type="submit" class="btn pieno grande" id="invia">Crea l'account</button>
+          <div id="esito" role="status" aria-live="polite"></div>
+          <p class="aiuto">Hai già un account? <a href="#accedi">Accedi</a>.</p>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ======================================================= ACCESSO -->
+<div id="vista-accedi" class="wrap" hidden>
+  <div class="stretta">
+    <h1>Accedi</h1>
+    <p class="sotto">Entra nell'area personale della tua impresa.</p>
+    <div class="pannello">
+      <form id="accesso" novalidate>
+        <div class="campo">
+          <label for="acc-email">Email</label>
+          <input id="acc-email" type="email" autocomplete="username" required>
+        </div>
+        <div class="campo">
+          <label for="acc-password">Password</label>
+          <div class="con-occhio">
+            <input id="acc-password" type="password" autocomplete="current-password" required>
+            <button type="button" data-mostra="acc-password" aria-pressed="false">Mostra</button>
+          </div>
+        </div>
+        <button type="submit" class="btn pieno grande" id="acc-invia">Accedi</button>
+        <div id="acc-esito" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+    <p class="dopo"><button type="button" class="come-link" id="dim-apri">Password dimenticata, o mai impostata?</button></p>
+    <div class="pannello" id="dim-pannello" hidden>
+      <form id="dimenticata" novalidate>
+        <p class="aiuto" style="font-size:14px">Scrivi l'email con cui l'impresa è iscritta: ti mandiamo un link per scegliere una password nuova. Vale anche se ti eri iscritto prima che esistesse l'area personale.</p>
+        <div class="campo">
+          <label for="dim-email">Email</label>
+          <input id="dim-email" type="email" autocomplete="username" required>
+        </div>
+        <button type="submit" class="btn contorno" id="dim-invia">Mandami il link</button>
+        <div id="dim-esito" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+    <p class="dopo">Non hai un account? <a href="#registrati">Crealo adesso</a>.</p>
+  </div>
+</div>
+
+<!-- ======================================================= AREA PERSONALE -->
+<div id="vista-area" hidden>
+  <div class="area-testa">
+    <div class="wrap">
+      <h1 id="area-nome">La tua area</h1>
+      <p class="riassunto" id="area-riassunto">Carico le tue gare…</p>
+      <ul class="dati-brevi" id="area-dati"></ul>
+      <div class="schede" role="tablist" aria-label="Sezioni dell'area personale">
+        <button role="tab" id="tab-gare" data-scheda="gare" aria-selected="true" aria-controls="scheda-gare">Gare aperte</button>
+        <button role="tab" id="tab-impresa" data-scheda="impresa" aria-selected="false" aria-controls="scheda-impresa">La tua impresa</button>
+        <button role="tab" id="tab-account" data-scheda="account" aria-selected="false" aria-controls="scheda-account">Account</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap area-corpo">
+    <div id="area-avviso" role="status" aria-live="polite"></div>
+
+    <section id="scheda-gare" role="tabpanel" aria-labelledby="tab-gare">
+      <div class="cerca">
+        <label for="q" class="trappola">Cerca tra le gare</label>
+        <input id="q" type="search" autocomplete="off" placeholder="Cerca: asfalto, Siena, un CIG…">
+        <div class="filtri" id="filtri">
+          <button type="button" data-filtro="tutte" aria-pressed="true">Tutte</button>
+          <button type="button" data-filtro="nuove" aria-pressed="false">Nuove</button>
+          <button type="button" data-filtro="scadenza" aria-pressed="false">In scadenza</button>
+          <button type="button" data-filtro="alta" aria-pressed="false">Affinità alta</button>
+          <label class="ordine" for="ordine">Ordina per <select id="ordine"><option value="scadenza">scadenza</option><option value="affinita">affinità</option></select></label>
+        </div>
+      </div>
+      <p class="conta" id="conta"></p>
+      <div id="lista"></div>
+      <p class="vuoto" id="vuoto" hidden></p>
+    </section>
+
+    <section id="scheda-impresa" role="tabpanel" aria-labelledby="tab-impresa" hidden>
+      <div class="blocco">
+        <h2>Come cerchiamo le gare per te</h2>
+        <p class="sotto">Da ogni codice ATECO ricaviamo i settori di gara e le parole da cercare nei bandi.</p>
+        <ul class="voci" id="voci"></ul>
+      </div>
+      <div class="blocco pannello">
+        <h2>Dati dell'impresa</h2>
+        <p class="sotto aiuto" style="margin-bottom:16px">Se cambi codici o regioni, l'elenco delle gare si aggiorna subito.</p>
+        <form id="modifica" novalidate>
+          <div class="coppia">
+            <div class="campo"><label for="m-email">Email</label><input id="m-email" type="email" disabled></div>
+            <div class="campo"><label for="m-piva">Partita IVA</label><input id="m-piva" type="text" disabled></div>
+          </div>
+          <div class="campo"><label for="m-ragione">Ragione sociale</label><input id="m-ragione" type="text" autocomplete="organization" maxlength="150"></div>
+          <div class="coppia">
+            <div class="campo" id="mf-ateco">
+              <label for="m-ateco">Codice ATECO</label>
+              <input id="m-ateco" type="text" inputmode="decimal" autocomplete="off" maxlength="10">
+              <p class="errore" id="merr-ateco" hidden></p>
+            </div>
+            <div class="campo" id="mf-altri">
+              <label for="m-altri">Altri codici ATECO <span class="facoltativo">(fino a 3)</span></label>
+              <input id="m-altri" type="text" inputmode="decimal" autocomplete="off" maxlength="60">
+              <p class="errore" id="merr-altri" hidden></p>
+            </div>
+          </div>
+          <div class="campo"><label for="m-soa">Classifica SOA <span class="facoltativo">(solo per chi fa lavori)</span></label><select id="m-soa"></select></div>
+          <fieldset class="campo" id="mf-area">
+            <legend>Dove lavori</legend>
+            <div class="scelta">
+              <label><input type="radio" name="m_area_tipo" value="italia" checked> Tutta Italia</label>
+              <label><input type="radio" name="m_area_tipo" value="regioni"> Solo alcune regioni</label>
+            </div>
+            <div class="regioni" id="m-regioni" hidden></div>
+            <p class="errore" id="merr-area" hidden></p>
+          </fieldset>
+          <div><button type="submit" class="btn pieno" id="m-invia">Salva le modifiche</button></div>
+          <div id="m-esito" role="status" aria-live="polite"></div>
+          <p class="aiuto">Per cambiare email o Partita IVA rispondi a una nostra email.</p>
+        </form>
+      </div>
+    </section>
+
+    <section id="scheda-account" role="tabpanel" aria-labelledby="tab-account" hidden>
+      <div class="due-colonne">
+        <div class="pannello">
+          <div class="blocco">
+            <h2>Password</h2>
+            <form id="cambio" novalidate>
+              <div class="campo"><label for="c-attuale">Password attuale</label><input id="c-attuale" type="password" autocomplete="current-password"></div>
+              <div class="campo">
+                <label for="c-nuova">Nuova password</label>
+                <div class="con-occhio"><input id="c-nuova" type="password" autocomplete="new-password" minlength="8" maxlength="200"><button type="button" data-mostra="c-nuova" aria-pressed="false">Mostra</button></div>
+                <p class="aiuto">Almeno 8 caratteri. Dopo il cambio, gli altri dispositivi dovranno accedere di nuovo.</p>
+              </div>
+              <div><button type="submit" class="btn contorno" id="c-invia">Cambia password</button></div>
+              <div id="c-esito" role="status" aria-live="polite"></div>
+            </form>
+          </div>
+          <div class="blocco">
+            <h2>Sessione</h2>
+            <p class="sotto aiuto" style="margin:0 0 12px">Su questo dispositivo resti collegato per 30 giorni.</p>
+            <button type="button" class="btn contorno" id="esci">Esci</button>
+          </div>
+        </div>
+        <div class="pannello pericolosa">
+          <h2 style="font-size:1.25rem;font-weight:800">Annulla l'iscrizione ed elimina l'account</h2>
+          <p style="margin:6px 0 14px;color:var(--muted)">Non riceverai più email e non potrai più entrare nell'area personale. Cancelliamo subito email, password, classifica SOA e regioni; per 12 mesi restano solo Partita IVA, ragione sociale, codici ATECO e la data, come indicato nell'informativa privacy.</p>
+          <button type="button" class="btn contorno" id="elimina-apri" style="color:var(--error)">Voglio eliminare l'account</button>
+          <form id="elimina" novalidate hidden>
+            <div class="campo">
+              <label for="e-motivo">Ci dici perché? <span class="facoltativo">(facoltativo)</span></label>
+              <select id="e-motivo">
+                <option value="">Preferisco non dirlo</option>
+                <option>Ricevo troppe email</option>
+                <option>I bandi non sono pertinenti alla mia attività</option>
+                <option>Gli importi non sono adatti alla mia impresa</option>
+                <option>Non partecipo più a gare pubbliche</option>
+                <option>Uso già un altro servizio</option>
+                <option>Altro</option>
+              </select>
+            </div>
+            <div class="campo"><label for="e-dettaglio">Vuoi aggiungere qualcosa? <span class="facoltativo">(facoltativo)</span></label><textarea id="e-dettaglio" maxlength="500"></textarea></div>
+            <div class="campo"><label for="e-password">Per conferma, scrivi la password</label><input id="e-password" type="password" autocomplete="current-password"></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px">
+              <button type="submit" class="btn pericolo" id="e-invia">Elimina definitivamente</button>
+              <button type="button" class="btn contorno" id="e-annulla">Annulla</button>
+            </div>
+            <div id="e-esito" role="status" aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="fonti">BandoRadar: monitoraggio di gare e appalti pubblici per le imprese italiane. Fonti: TED (Unione Europea), Pubblicità legale e banca dati ANAC.</p>
+    <details id="privacy">
+      <summary>Informativa privacy</summary>
+      <p><b>Titolare:</b> Giovanni Tognozzi, progetto BandoRadar. Contatto: <span>giovanni.tognozzi@gmail.com</span></p>
+      <p><b>Dati raccolti:</b> email, password, Partita IVA, ragione sociale, codici ATECO, classifica SOA e regioni di attività. La password non viene conservata: ne teniamo solo un'impronta cifrata dalla quale non si può risalire alla password.</p>
+      <p><b>Finalità:</b> creare l'account, darti accesso all'area personale, inviarti la conferma e la selezione dei bandi pubblici adatti alla tua impresa. Ogni email contiene il link per annullare l'iscrizione. Base giuridica: il tuo consenso (art. 6.1.a GDPR).</p>
+      <p><b>Sul tuo dispositivo:</b> dopo l'accesso il browser conserva per 30 giorni un codice di sessione, che serve solo a tenerti collegato; si cancella quando esci. Non usiamo cookie di profilazione né strumenti di tracciamento.</p>
+      <p><b>Conservazione:</b> fino alla revoca del consenso. Quando elimini l'account o annulli l'iscrizione cancelliamo subito email, impronta della password, classifica SOA e regioni; conserviamo per 12 mesi solo Partita IVA, ragione sociale, codici ATECO e data di cancellazione, per documentare la revoca e non scriverti più (legittimo interesse, art. 6.1.f GDPR), poi eliminiamo anche questi. Puoi chiederne la cancellazione immediata scrivendo al contatto sopra. Non cediamo i dati a terzi. Gli account sono archiviati in un foglio Google Workspace del titolare (Google è il fornitore tecnico).</p>
+      <p><b>I tuoi diritti:</b> accesso, rettifica, cancellazione, limitazione, portabilità e revoca del consenso in qualsiasi momento (artt. 15-22 GDPR), dall'area personale o scrivendo al contatto sopra. Puoi presentare reclamo al Garante per la protezione dei dati personali.</p>
+    </details>
+  </div>
+</footer>
+
+<script>
+// Indirizzo dell'app web Google Apps Script: iscrizioni, accesso e dati dell'area personale.
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbw2v_19UECrelUGposyRbOwebAxJjCYJ6U761e9FUlOpqEkbIA52HzYIpHoCUewE1Ey/exec";
+
+const $ = id => document.getElementById(id);
+const CHIAVE_SESSIONE = "bandoradar.sessione";
+const MESI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+const GIORNI_URGENTE = 7;
+const REGIONI = ["Abruzzo", "Basilicata", "Calabria", "Campania", "Emilia-Romagna", "Friuli-Venezia Giulia", "Lazio",
+                 "Liguria", "Lombardia", "Marche", "Molise", "Piemonte", "Puglia", "Sardegna", "Sicilia", "Toscana",
+                 "Trentino-Alto Adige", "Umbria", "Valle d'Aosta", "Veneto"];
+const CLASSIFICHE = [["", "Non ho l'attestazione SOA"], ["I", "I, fino a 258.000 €"], ["II", "II, fino a 516.000 €"], ["III", "III, fino a 1.033.000 €"],
+  ["III-bis", "III-bis, fino a 1.500.000 €"], ["IV", "IV, fino a 2.582.000 €"], ["IV-bis", "IV-bis, fino a 3.500.000 €"],
+  ["V", "V, fino a 5.165.000 €"], ["VI", "VI, fino a 10.329.000 €"], ["VII", "VII, fino a 15.494.000 €"], ["VIII", "VIII, oltre 15.494.000 €"]];
+const stato = { dati: null, filtro: "tutte", ordine: "scadenza", benvenuto: "", vista: "home" };
+
+// ------------------------------------------------------------------ strumenti
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function norm(s) { return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+function sessione() { try { return localStorage.getItem(CHIAVE_SESSIONE) || ""; } catch (e) { return stato.sessioneVolante || ""; } }
+function salvaSessione(s) {
+  stato.sessioneVolante = s || "";
+  try { if (s) localStorage.setItem(CHIAVE_SESSIONE, s); else localStorage.removeItem(CHIAVE_SESSIONE); } catch (e) { /* navigazione privata: resta in memoria */ }
+  aggiornaTestata();
+}
+// in testata: "ospite" = chi non è entrato; "iscritto" = entrato, fuori dall'area; "area" = dentro l'area
+function aggiornaTestata() {
+  const dentro = !!sessione(), inArea = stato.vista === "area";
+  document.querySelectorAll("[data-per]").forEach(el => {
+    const per = el.dataset.per;
+    el.hidden = per === "ospite" ? dentro : per === "area" ? !(dentro && inArea) : !(dentro && !inArea);
+  });
+}
+
+/** Una chiamata allo script. Il corpo parte come testo semplice: Apps Script non gestisce le richieste preliminari CORS. */
+async function chiama(dati) {
+  const stop = new AbortController();
+  const timer = setTimeout(() => stop.abort(), 45000);
+  try {
+    const r = await fetch(ENDPOINT, { method: "POST", body: JSON.stringify(dati), signal: stop.signal });
+    const j = await r.json().catch(() => null);
+    return j || { ok: false, errore: "Il server non ha risposto. Riprova tra qualche minuto." };
+  } catch (e) {
+    return { ok: false, errore: "Connessione non riuscita. Controlla la rete e riprova." };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function esito(el, tipo, titolo, testo) {
+  el.className = tipo ? "esito " + tipo : "";
+  el.textContent = "";
+  if (!tipo) return;
+  const b = document.createElement("b"); b.textContent = titolo;
+  el.append(b);
+  if (testo) el.append(document.createTextNode(testo));
+}
+function occupato(bottone, testo) {
+  if (testo) { bottone.dataset.testo = bottone.textContent; bottone.textContent = testo; bottone.disabled = true; }
+  else { bottone.textContent = bottone.dataset.testo || bottone.textContent; bottone.disabled = false; }
+}
+function segna(campoId, errId, messaggio) {
+  const campo = $(campoId), err = $(errId);
+  campo.classList.toggle("sbagliato", !!messaggio);
+  err.textContent = messaggio || ""; err.hidden = !messaggio;
+  return !messaggio;
+}
+
+// Partita IVA italiana: 11 cifre + cifra di controllo
+function pivaValida(raw) {
+  const s = String(raw).replace(/\s+/g, "").replace(/^IT/i, "");
+  if (!/^\d{11}$/.test(s)) return { ok: false, motivo: "La Partita IVA ha 11 cifre, senza lettere." };
+  let tot = 0;
+  for (let i = 0; i < 10; i++) { let d = +s[i]; if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; } tot += d; }
+  if ((10 - (tot % 10)) % 10 !== +s[10]) return { ok: false, motivo: "Questa Partita IVA non è valida: controlla le cifre." };
+  return { ok: true, valore: s };
+}
+function atecoValido(v) { const cifre = String(v || "").replace(/[^\d]/g, ""); return cifre.length >= 2 && cifre.length <= 6; }
+// "47.73.10, 86.90.29" o "47.73.10 86.90.29" -> due codici; "47 73 10" resta un codice solo (come lo script)
+function altriAteco(testo) {
+  const out = [];
+  String(testo || "").split(/[,;\n|\/]+/).forEach(pezzo => {
+    const parole = pezzo.trim().split(/\s+/).filter(Boolean);
+    if (!parole.length) return;
+    const completi = parole.length > 1 && parole.every(w => /\./.test(w) || w.replace(/\D/g, "").length >= 4);
+    if (completi) out.push(...parole); else out.push(parole.join(""));
+  });
+  return out;
+}
+function erroreAltri(testo) {
+  const codici = altriAteco(testo);
+  const sbagliato = codici.find(c => /[^\d.\s]/.test(c) || !atecoValido(c));
+  if (sbagliato) return "«" + sbagliato.slice(0, 15) + "» non sembra un codice ATECO: scrivi le cifre, per esempio 47.73.10.";
+  if (codici.length > 3) return "Al massimo 3 codici in più (oltre a quello principale).";
+  return "";
+}
+
+// Il blocco "dove lavori" serve due volte (registrazione e modifica dei dati): stessa logica, nomi diversi
+function areaModulo(nomeRadio, box, nomeCaselle) {
+  REGIONI.forEach(r => {
+    const l = document.createElement("label"), c = document.createElement("input");
+    c.type = "checkbox"; c.name = nomeCaselle; c.value = r;
+    l.append(c, " " + r); box.append(l);
+  });
+  const radio = () => document.querySelector('input[name="' + nomeRadio + '"]:checked').value;
+  const m = {
+    soloRegioni: () => radio() === "regioni",
+    aggiorna: () => { box.hidden = !m.soloRegioni(); },
+    scelta: () => m.soloRegioni() ? [...box.querySelectorAll("input:checked")].map(c => c.value) : ["Tutta Italia"],
+    imposta: area => {
+      const regioni = String(area || "").split(",").map(x => x.trim()).filter(x => REGIONI.includes(x));
+      document.querySelector('input[name="' + nomeRadio + '"][value="' + (regioni.length ? "regioni" : "italia") + '"]').checked = true;
+      box.querySelectorAll("input").forEach(c => { c.checked = regioni.includes(c.value); });
+      m.aggiorna();
+    }
+  };
+  document.querySelectorAll('input[name="' + nomeRadio + '"]').forEach(r => r.addEventListener("change", () => {
+    m.aggiorna();
+    if (m.soloRegioni()) box.querySelector("input").focus();
+    box.dispatchEvent(new Event("change"));
+  }));
+  return m;
+}
+[$("soa"), $("m-soa")].forEach(sel => CLASSIFICHE.forEach(([v, t]) => sel.append(new Option(t, v))));
+const areaIscrizione = areaModulo("area_tipo", $("regioni"), "regioni");
+const areaModifica = areaModulo("m_area_tipo", $("m-regioni"), "m_regioni");
+
+document.querySelectorAll("[data-mostra]").forEach(b => b.addEventListener("click", () => {
+  const campo = $(b.dataset.mostra), visibile = campo.type === "password";
+  campo.type = visibile ? "text" : "password";
+  b.textContent = visibile ? "Nascondi" : "Mostra"; b.setAttribute("aria-pressed", String(visibile));
+}));
+
+// date degli esempi, sempre nel futuro
+document.querySelectorAll("[data-giorno]").forEach(el => { const d = new Date(); d.setDate(d.getDate() + Number(el.dataset.giorno)); el.textContent = d.getDate(); });
+document.querySelectorAll("[data-mese]").forEach(el => { const d = new Date(); d.setDate(d.getDate() + Number(el.dataset.mese)); el.textContent = MESI[d.getMonth()]; });
+
+// ------------------------------------------------------------------ viste
+function mostraVista(nome) {
+  ["home", "accedi", "area"].forEach(v => { $("vista-" + v).hidden = v !== nome; });
+  stato.vista = nome; aggiornaTestata();
+  document.title = nome === "area" ? "BandoRadar · La tua area" : nome === "accedi" ? "BandoRadar · Accedi" : "BandoRadar";
+}
+function instrada() {
+  const h = location.hash.replace(/^#/, "");
+  if (h === "area") {
+    if (!sessione()) { location.replace("#accedi"); return; }
+    mostraVista("area"); window.scrollTo(0, 0);
+    if (!stato.dati) caricaArea(); else disegnaArea();
+    return;
+  }
+  if (h === "accedi") {
+    if (sessione()) { location.replace("#area"); return; }
+    mostraVista("accedi"); window.scrollTo(0, 0); $("acc-email").focus();
+    return;
+  }
+  mostraVista("home");
+  const dove = h && document.getElementById(h);
+  if (dove) { if (dove.tagName === "DETAILS") dove.open = true; dove.scrollIntoView(); } else window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", instrada);
+
+// ------------------------------------------------------------------ registrazione
+const formIscrizione = $("iscrizione");
+function validaIscrizione() {
+  const email = $("email").value.trim(), p = pivaValida($("piva").value), pw = $("password").value;
+  let ok = true;
+  ok = segna("f-email", "err-email", /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? "" : "Inserisci un indirizzo email valido.") && ok;
+  ok = segna("f-password", "err-password", pw.length >= 8 ? "" : "La password deve avere almeno 8 caratteri.") && ok;
+  ok = segna("f-piva", "err-piva", p.ok ? "" : p.motivo) && ok;
+  ok = segna("f-ateco", "err-ateco", atecoValido($("ateco").value) ? "" : "Inserisci il codice ATECO, per esempio 43.21.01 (da 2 a 6 cifre).") && ok;
+  ok = segna("f-altri", "err-altri", erroreAltri($("altri").value)) && ok;
+  ok = segna("f-area", "err-area", areaIscrizione.scelta().length ? "" : "Scegli almeno una regione, oppure Tutta Italia.") && ok;
+  ok = segna("f-consenso", "err-consenso", $("consenso").checked ? "" : "Serve il consenso per poterti inviare i bandi.") && ok;
+  return ok ? p.valore : null;
+}
+// dopo il primo tentativo gli errori si aggiornano mentre scrivi (non all'uscita dal campo:
+// un messaggio che compare al clic sposterebbe il riquadro sotto il mouse)
+["email", "password", "piva", "ateco", "altri"].forEach(id => $(id).addEventListener("input", () => { if (formIscrizione.dataset.provato) validaIscrizione(); }));
+$("consenso").addEventListener("change", () => { if (formIscrizione.dataset.provato) validaIscrizione(); });
+$("regioni").addEventListener("change", () => { if (formIscrizione.dataset.provato) validaIscrizione(); });
+
+formIscrizione.addEventListener("submit", async e => {
+  e.preventDefault();
+  formIscrizione.dataset.provato = "1";
+  esito($("esito"), "");
+  const piva = validaIscrizione();
+  if (!piva) { const primo = formIscrizione.querySelector(".sbagliato input, .sbagliato select"); if (primo) primo.focus(); return; }
+  const email = $("email").value.trim();
+  occupato($("invia"), "Creo l'account…");
+  const j = await chiama({
+    email: email, password: $("password").value, partita_iva: piva, ragione_sociale: $("ragione").value.trim(),
+    ateco: $("ateco").value.trim(), ateco_altri: altriAteco($("altri").value).join(", "), classifica_soa: $("soa").value,
+    area: areaIscrizione.scelta(), consenso_privacy: true, botcheck: $("botcheck").checked
+  });
+  occupato($("invia"));
+  if (j.ok && j.sessione) {
+    formIscrizione.reset(); delete formIscrizione.dataset.provato; areaIscrizione.aggiorna();
+    svuotaArea();
+    stato.benvenuto = (j.email_inviata === false ? "" : "Ti abbiamo inviato la conferma a " + email + ". ") +
+      "Qui sotto trovi le gare aperte adatte alla tua impresa; da domani ti scriviamo ogni mattina in cui ne escono di nuove.";
+    salvaSessione(j.sessione);
+    location.hash = "#area";
+  } else if (j.ok && j.codice === "imposta_password") {
+    esito($("esito"), "ok", "Questa impresa era già iscritta", "Per entrare nell'area personale ti abbiamo mandato un'email con il link per scegliere la password. Se non la trovi, controlla lo spam.");
+  } else if (j.ok) {
+    esito($("esito"), "ok", "Iscrizione completata", "Ti abbiamo inviato la conferma a " + email + ".");
+  } else {
+    esito($("esito"), "ko", "Account non creato", j.errore || "Riprova tra qualche minuto.");
+    if (j.codice === "esiste" || j.codice === "email_usata") {
+      const a = document.createElement("a"); a.href = "#accedi"; a.textContent = " Vai all'accesso";
+      $("esito").append(a);
+    }
+  }
+});
+
+// ------------------------------------------------------------------ accesso
+$("accesso").addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = $("acc-email").value.trim(), pw = $("acc-password").value;
+  if (!email || !pw) { esito($("acc-esito"), "ko", "Mancano dei dati", "Scrivi email e password."); return; }
+  esito($("acc-esito"), "");
+  occupato($("acc-invia"), "Accedo…");
+  const j = await chiama({ azione: "accedi", email: email, password: pw });
+  occupato($("acc-invia"));
+  if (j.ok && j.sessione) {
+    $("accesso").reset();
+    svuotaArea();
+    stato.dati = j;
+    salvaSessione(j.sessione);
+    location.hash = "#area";
+  } else {
+    esito($("acc-esito"), "ko", "Accesso non riuscito", j.errore || "Riprova tra qualche minuto.");
+  }
+});
+$("dim-apri").addEventListener("click", () => {
+  $("dim-pannello").hidden = !$("dim-pannello").hidden;
+  if (!$("dim-pannello").hidden) { $("dim-email").value = $("acc-email").value; $("dim-email").focus(); }
+});
+$("dimenticata").addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = $("dim-email").value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { esito($("dim-esito"), "ko", "Email non valida", "Controlla l'indirizzo."); return; }
+  occupato($("dim-invia"), "Invio…");
+  const j = await chiama({ azione: "password_dimenticata", email: email });
+  occupato($("dim-invia"));
+  if (j.ok) esito($("dim-esito"), "ok", "Controlla la posta", "Se " + email + " è l'email di un'impresa iscritta, tra poco arriva il link per scegliere la password. Vale un'ora.");
+  else esito($("dim-esito"), "ko", "Email non inviata", j.errore || "Riprova tra qualche minuto.");
+});
+
+// ------------------------------------------------------------------ area personale
+function sessioneScaduta() {
+  salvaSessione(""); svuotaArea();
+  location.hash = "#accedi";
+  esito($("acc-esito"), "ko", "Sessione scaduta", "Accedi di nuovo per rientrare nella tua area.");
+}
+async function caricaArea() {
+  $("area-nome").textContent = "La tua area"; $("area-riassunto").textContent = "Carico le tue gare…"; $("area-dati").textContent = "";
+  $("lista").innerHTML = '<p class="carico">Un momento…</p>'; $("conta").textContent = ""; $("vuoto").hidden = true;
+  const j = await chiama({ azione: "area", sessione: sessione() });
+  if (!j.ok) {
+    if (j.codice === "sessione") return sessioneScaduta();
+    $("lista").innerHTML = ""; $("area-riassunto").textContent = "";
+    esito($("area-avviso"), "ko", "Non riesco a caricare le gare", j.errore || "Riprova tra qualche minuto.");
+    return;
+  }
+  stato.dati = j;
+  disegnaArea();
+}
+
+function giorniA(scadenza) {
+  const m = String(scadenza || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const oggi = new Date(); oggi.setHours(0, 0, 0, 0);
+  return Math.round((new Date(+m[1], +m[2] - 1, +m[3]) - oggi) / 86400000);
+}
+function fra(g) { return g <= 0 ? "oggi" : g === 1 ? "domani" : "tra " + g + " giorni"; }
+function quando(b) {
+  const m = String(b.s || "").match(/^(\d{4})-(\d{2})-(\d{2})/), g = giorniA(b.s);
+  if (!m || g == null) return '<div class="quando"><div class="senza">scadenza non indicata</div></div>';
+  const anno = +m[1] !== new Date().getFullYear() ? " " + m[1] : "";
+  return '<div class="quando" title="scade il ' + m[3] + "/" + m[2] + "/" + m[1] + '"><div class="giorno">' + (+m[3]) + '</div><div class="mese">' +
+         MESI[+m[2] - 1] + anno + '</div><div class="manca">' + fra(g) + "</div></div>";
+}
+function schedaGara(b) {
+  const g = giorniA(b.s), urgente = g != null && g <= GIORNI_URGENTE;
+  const etichette = (b.n ? '<span class="etichetta verde">Nuova</span>' : "") +
+    (b.tp === "indagine" ? '<span class="etichetta viola">Manifestazione di interesse</span>' : "") +
+    (b.tp === "preinformazione" ? '<span class="etichetta grigia">Preinformazione</span>' : "");
+  const k = b.im.indexOf(" (");
+  const importo = /^non indicato/.test(b.im) ? "<span>Importo " + esc(b.im) + "</span>"
+    : "<b>" + esc(k < 0 ? b.im : b.im.slice(0, k)) + "</b>" + (k < 0 ? "" : "<span>" + esc(b.im.slice(k)) + "</span>");
+  const livello = b.a === 2 ? '<b class="alta">● Affinità alta</b>' : b.a === 1 ? '<b class="media">● Affinità media</b>' : "<b>○ Da valutare</b>";
+  const web = u => /^https?:\/\//i.test(String(u || "")) ? String(u) : "";      // mai un indirizzo che non sia una pagina web
+  const u = web(b.u), doc = web(b.d);
+  let mosse = (u ? '<a class="btn pieno piccolo" target="_blank" rel="noopener" href="' + esc(u) + '">Apri il bando</a>' : "") +
+              (doc ? '<a class="doc" target="_blank" rel="noopener" href="' + esc(doc) + '">' + esc(b.de || "Documenti di gara ↗") + "</a>" : "");
+  mosse = mosse
+    ? '<div class="mosse">' + mosse + "</div>" + (b.c && b.f !== "TED" ? '<p class="cig">CIG <code>' + esc(b.c) + "</code>" + (b.l ? " (primo di " + b.l + " lotti)" : "") + "</p>" : "")
+    : '<div class="cig-solo">' + (b.l ? "Codice CIG del primo lotto (gara con " + b.l + " lotti)" : "Codice CIG") +
+      ": cercalo sul portale dell'ente o della tua regione.<b>" + esc(b.c || "n/d") + "</b></div>";
+  return '<article class="gara riga' + (urgente ? " urgente" : "") + '">' + quando(b) + '<div class="corpo">' +
+    (etichette ? "<div>" + etichette + "</div>" : "") +
+    "<h3>" + esc(b.o) + "</h3>" +
+    '<p class="ente">' + esc(b.e || "Ente non indicato") + (b.r ? "<span>, " + esc(b.r) + "</span>" : "") + "</p>" +
+    (b.tp === "indagine" ? '<p class="nota">Non è ancora la gara: l\'ente raccoglie le candidature delle imprese da invitare.</p>' : "") +
+    (b.ur ? '<p class="avviso">Manca poco: per email non te l\'abbiamo mandata, ma è ancora aperta.</p>' : "") +
+    '</div><div class="lato"><p class="importo">' + importo + "</p>" +
+    '<p class="affinita">' + livello + (b.m ? "<span>" + esc(b.m) + "</span>" : "") + "</p>" + mosse + "</div></article>";
+}
+// singolare/plurale nella ricerca: "guanto" trova anche "guanti" (si cerca la parola senza l'ultima vocale)
+function radice(x) { return x.length >= 5 && /[aeiou]$/.test(x) ? x.slice(0, -1) : x; }
+
+function disegnaArea() {
+  const d = stato.dati, p = d.profilo, bandi = d.bandi || [];
+  $("area-nome").textContent = p.ragione_sociale || ("Partita IVA " + p.partita_iva);
+  const urgenti = bandi.filter(b => { const g = giorniA(b.s); return g != null && g <= GIORNI_URGENTE; }).length;
+  $("area-riassunto").innerHTML = bandi.length
+    ? (bandi.length === 1 ? "1 gara aperta adatta a te." : bandi.length + " gare aperte adatte a te.") +
+      (urgenti ? " <b>" + (urgenti === 1 ? "Una scade" : urgenti + " scadono") + " entro " + GIORNI_URGENTE + " giorni.</b>" : "")
+    : "Al momento non ci sono gare aperte adatte. Ti scriviamo appena ne esce una.";
+  $("area-dati").innerHTML = ["ATECO " + p.ateco, p.area].concat(p.classifica_soa ? ["SOA " + p.classifica_soa] : []).map(x => "<li>" + esc(x) + "</li>").join("");
+  $("tab-gare").textContent = "Gare aperte" + (bandi.length ? " (" + bandi.length + ")" : "");
+  if (stato.benvenuto) { esito($("area-avviso"), "ok", "Account creato", stato.benvenuto); $("area-avviso").classList.add("benvenuto"); stato.benvenuto = ""; }
+  bandi.forEach(b => { if (!b.k) b.k = " " + norm([b.o, b.e, b.r, b.c, b.m, b.t].join(" ")) + " "; });
+  disegnaLista();
+  // la tua impresa
+  $("voci").innerHTML = (p.voci || []).map(v => "<li><code>" + esc(v.codice) + "</code>" +
+    (v.descrizione ? esc(v.descrizione) : "Per questo codice non abbiamo ancora una voce: scrivici e la aggiungiamo.") +
+    (v.generica ? "<small>È una voce generica: se aggiungi un codice ATECO più preciso, le gare saranno più mirate.</small>" : "") + "</li>").join("");
+  const codici = String(p.ateco || "").split(",").map(x => x.trim()).filter(Boolean);
+  $("m-email").value = p.email; $("m-piva").value = p.partita_iva; $("m-ragione").value = p.ragione_sociale || "";
+  $("m-ateco").value = codici[0] || ""; $("m-altri").value = codici.slice(1).join(", "); $("m-soa").value = p.classifica_soa || "";
+  areaModifica.imposta(p.area === "Tutta Italia" ? "" : p.area);
+}
+function disegnaLista() {
+  const bandi = (stato.dati && stato.dati.bandi) || [];
+  const parole = norm($("q").value).split(" ").filter(Boolean).map(radice);
+  const scelte = bandi.filter(b => {
+    const g = giorniA(b.s);
+    if (stato.filtro === "nuove" && !b.n) return false;
+    if (stato.filtro === "scadenza" && !(g != null && g <= GIORNI_URGENTE)) return false;
+    if (stato.filtro === "alta" && b.a !== 2) return false;
+    return parole.every(x => b.k.indexOf(x) >= 0);
+  });
+  const perData = (a, b) => (a.s || "9999").localeCompare(b.s || "9999");
+  scelte.sort(stato.ordine === "affinita" ? (a, b) => (b.a - a.a) || perData(a, b) : perData);
+  $("lista").innerHTML = scelte.map(schedaGara).join("");
+  const filtrate = parole.length || stato.filtro !== "tutte";
+  $("conta").textContent = !bandi.length ? "" : filtrate ? scelte.length + " di " + bandi.length + " gare" : (bandi.length === 1 ? "1 gara" : bandi.length + " gare") +
+    ", in ordine di " + (stato.ordine === "affinita" ? "affinità" : "scadenza") + ". L'elenco si aggiorna ogni mattina.";
+  $("vuoto").hidden = !!scelte.length;
+  $("vuoto").textContent = !bandi.length ? "Qui compariranno le gare aperte adatte alla tua impresa. Se pensi che manchi qualcosa, controlla i codici ATECO nella scheda «La tua impresa»."
+    : "Nessuna gara corrisponde. Togli un filtro o prova un'altra parola.";
+}
+$("q").addEventListener("input", disegnaLista);
+$("ordine").addEventListener("change", () => { stato.ordine = $("ordine").value; disegnaLista(); });
+$("filtri").addEventListener("click", e => {
+  const b = e.target.closest("[data-filtro]"); if (!b) return;
+  stato.filtro = b.dataset.filtro;
+  $("filtri").querySelectorAll("[data-filtro]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  disegnaLista();
+});
+function apriScheda(nome) {
+  document.querySelectorAll(".schede [data-scheda]").forEach(t => {
+    t.setAttribute("aria-selected", String(t.dataset.scheda === nome));
+    $("scheda-" + t.dataset.scheda).hidden = t.dataset.scheda !== nome;
+  });
+}
+document.querySelectorAll(".schede [data-scheda]").forEach(tab => tab.addEventListener("click", () => {
+  apriScheda(tab.dataset.scheda);
+  esito($("area-avviso"), "");
+}));
+/** Uscendo (o cambiando account) nell'area non deve restare nulla di chi c'era prima. */
+function svuotaArea() {
+  stato.dati = null; stato.filtro = "tutte"; stato.ordine = "scadenza"; stato.benvenuto = "";
+  apriScheda("gare");
+  $("q").value = ""; $("ordine").value = "scadenza";
+  $("filtri").querySelectorAll("[data-filtro]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.filtro === "tutte")));
+  ["lista", "voci", "area-dati", "conta"].forEach(id => { $(id).textContent = ""; });
+  ["modifica", "cambio", "elimina"].forEach(id => $(id).reset());
+  areaModifica.aggiorna();
+  $("elimina").hidden = true; $("elimina-apri").hidden = false;
+  ["area-avviso", "m-esito", "c-esito", "e-esito"].forEach(id => esito($(id), ""));
+}
+
+// modifica dei dati
+$("modifica").addEventListener("submit", async e => {
+  e.preventDefault();
+  let ok = true;
+  ok = segna("mf-ateco", "merr-ateco", atecoValido($("m-ateco").value) ? "" : "Inserisci il codice ATECO, per esempio 43.21.01.") && ok;
+  ok = segna("mf-altri", "merr-altri", erroreAltri($("m-altri").value)) && ok;
+  ok = segna("mf-area", "merr-area", areaModifica.scelta().length ? "" : "Scegli almeno una regione, oppure Tutta Italia.") && ok;
+  if (!ok) return;
+  occupato($("m-invia"), "Salvo…");
+  const j = await chiama({ azione: "aggiorna", sessione: sessione(), ragione_sociale: $("m-ragione").value.trim(), ateco: $("m-ateco").value.trim(),
+                           ateco_altri: altriAteco($("m-altri").value).join(", "), classifica_soa: $("m-soa").value, area: areaModifica.scelta() });
+  occupato($("m-invia"));
+  if (j.ok) {
+    stato.dati = j; disegnaArea();
+    const n = j.bandi.length;
+    esito($("m-esito"), "ok", "Dati salvati", "Con questi dati ci sono " + (n === 1 ? "1 gara aperta adatta" : n + " gare aperte adatte") + " a te.");
+  } else if (j.codice === "sessione") sessioneScaduta();
+  else esito($("m-esito"), "ko", "Dati non salvati", j.errore || "Riprova tra qualche minuto.");
+});
+
+// password, uscita, eliminazione
+$("cambio").addEventListener("submit", async e => {
+  e.preventDefault();
+  if ($("c-nuova").value.length < 8) { esito($("c-esito"), "ko", "Password troppo corta", "Servono almeno 8 caratteri."); return; }
+  occupato($("c-invia"), "Cambio…");
+  const j = await chiama({ azione: "cambia_password", sessione: sessione(), password_attuale: $("c-attuale").value, password_nuova: $("c-nuova").value });
+  occupato($("c-invia"));
+  if (j.ok) { salvaSessione(j.sessione); $("cambio").reset(); esito($("c-esito"), "ok", "Password cambiata", "Da ora si entra con la nuova."); }
+  else if (j.codice === "sessione") sessioneScaduta();
+  else esito($("c-esito"), "ko", "Password non cambiata", j.errore || "Riprova tra qualche minuto.");
+});
+function esci() { salvaSessione(""); svuotaArea(); location.hash = "#inizio"; }
+$("esci").addEventListener("click", esci);
+$("nav-esci").addEventListener("click", esci);
+$("elimina-apri").addEventListener("click", () => { $("elimina").hidden = false; $("elimina-apri").hidden = true; $("e-password").focus(); });
+$("e-annulla").addEventListener("click", () => { $("elimina").hidden = true; $("elimina-apri").hidden = false; $("elimina").reset(); esito($("e-esito"), ""); });
+$("elimina").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!$("e-password").value) { esito($("e-esito"), "ko", "Manca la password", "Scrivila per confermare."); return; }
+  occupato($("e-invia"), "Elimino…");
+  const j = await chiama({ azione: "elimina", sessione: sessione(), password: $("e-password").value, motivo: $("e-motivo").value, dettaglio: $("e-dettaglio").value });
+  occupato($("e-invia"));
+  if (j.ok) {
+    salvaSessione(""); svuotaArea();
+    location.hash = "#registrati";
+    esito($("esito"), "ok", "Account eliminato", "Non riceverai più email da BandoRadar. Se cambi idea, puoi creare un nuovo account qui.");
+  } else if (j.codice === "sessione") sessioneScaduta();
+  else esito($("e-esito"), "ko", "Account non eliminato", j.errore || "Riprova tra qualche minuto.");
+});
+
+aggiornaTestata();
+instrada();
+</script>
+</body>
+</html>
